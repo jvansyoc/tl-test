@@ -127,7 +127,7 @@ Part 4
 
 What's the actual risk of docker run with no restart policy and no health-based rollback, and what's the smallest change that reduces it?
 
-Without a restart policy, if the container fails during boot or crashes later, it just stays down - nothing brings it back. The HEALTHCHECK in the Dockerfile marks the container unhealthy in docker inspect, but nothing in the deploy job reads that status, so it doesn't stop a broken container from being deployed or roll back to the last working image.
+Without a restart policy the container could fail during boot or crash later. The healthcheck in the Dockerfile marks the container unhealthy in docker inspect. To reduce risk you would want something to read that status, so it stops a broken container from being deployed or can roll back to the last working image.
 
 ===========
 
