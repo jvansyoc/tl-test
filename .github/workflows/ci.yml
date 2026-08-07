@@ -36,3 +36,24 @@ jobs:
       - run: dotnet format --verify-no-changes
       - run: dotnet build -c Release
       - run: dotnet list package --vulnerable --include-transitive
+
+  docker-build-and-scan:
+    if: ${{ !inputs.redeploy_only }}
+    needs: format-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./OrderService
+          tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.IMAGE_NAME }}:${{ github.sha }}'
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+          exit-code: '1'
