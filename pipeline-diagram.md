@@ -1,13 +1,13 @@
 ```mermaid
-flowchart TD
-    T1(["push / PR to main"]) --> A
-    T2(["workflow_dispatch<br/>redeploy_only"]) -.skips to.-> D
+flowchart LR
+    T1(["push / pull_request to main"]) --> A
+    T2(["workflow_dispatch: redeploy_only"]) -.skips ahead to.-> D
 
-    A["format-and-test"]:::gate
-    B["docker-build-and-scan"]:::gate
-    C["push to GHCR"]:::gate
-    D["deploy"]:::gate
-    R["dependency scan<br/>(report only)"]:::report
+    A["format-and-test<br/>(format check, build, dependency scan)"]:::gate
+    B["docker-build-and-scan<br/>(docker build + Trivy image scan)"]:::gate
+    C["push<br/>(push image to GHCR — main only)"]:::gate
+    D["deploy<br/>(pull, run, verify — main only or redeploy_only)"]:::gate
+    R["dependency scan step<br/>REPORT ONLY — informational,<br/>does not fail the job"]:::report
 
     A -->|needs| B
     B -->|needs| C
