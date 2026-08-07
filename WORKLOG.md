@@ -59,15 +59,15 @@ We care because root runs without guardrails, it can run any command and access 
 
 ===========
 
-.editorconfig - not called out as its own numbered step but listed under "what to submit". Needed anyway since dotnet format --verify-no-changes checks against it - without it the gate just enforces the SDK's implicit defaults instead of something explicit.
+Added .editorconfig. This is needed since dotnet format "--verify-no-changes" checks against it and without the gate it will just enforce the SDK's implicit defaults instead of something explicit.
 
 ===========
 
-No dotnet test step in ci.yml. No test project exists in the repo (no xunit/nunit/mstest csproj), so running it as-is would fail on a missing target, not a real test failure. App is two one-line GET endpoints, already verified manually with curl. If this grows real logic later, next step is a proper OrderService.Tests project with WebApplicationFactory<Program> for integration tests, added as a step ahead of the docker build.
+Skipped dotnet test in ci.yml since there is no test project in the repo yet. It would just fail looking for something that doesn't exist. The app is only two, one-line, GET endpoints, and that is already checked those manually with curl. 
 
 ===========
 
-Tested that the format gate actually blocks the pipeline - added bad indentation to Program.cs on purpose, pushed without running dotnet format locally first.
+Tested that the format gate actually blocks the pipeline by adding bad indentation to Program.cs on purpose, pushed without running dotnet format locally first.
 
 format-and-test failed on the format step:
 Run dotnet format --verify-no-changes
@@ -75,11 +75,14 @@ Run dotnet format --verify-no-changes
 /home/runner/work/tl-test/tl-test/OrderService/Program.cs(7,1): error WHITESPACE: Fix whitespace formatting. Delete 4 characters.
 Error: Process completed with exit code 2.
 
-Non-zero exit code = step fails = job stops. build and dependency scan steps never ran after it. docker-build-and-scan job never triggered either since it needs: format-and-test - so one bad indent blocks the whole rest of the pipeline (docker build, scan, push, deploy). Fixed the indentation, reran dotnet format locally, pushed again, gate went back to green.
+Non-zero exit code = step fails = job stops. build and dependency scan steps never ran after it. 
+
+Docker-build-and-scan job never triggered either since it needs: format-and-test, so one bad indent blocks the whole rest of the pipeline.
+Fixed the indentation, reran dotnet format locally, pushed again, gate went back to green.
 
 ===========
 
-Added push job - builds and pushes image to GHCR, gated to main only. Used built-in GITHUB_TOKEN instead of a custom PAT (auto-rotates, scoped to repo, no manual secret setup needed).
+Added push job to builds and push image to GHCR, gated to main only. Used built-in GITHUB_TOKEN instead of a custom token.
 
 Checked repo Settings > Actions > General > Workflow permissions - set to "Read repository contents and packages permissions" (read-only default). Confirmed this doesn't block the push job since it declares its own permissions: packages: write at the job level, which overrides the repo-wide default for just that job. Left the repo setting as-is, didn't need to change it.
 
@@ -93,9 +96,9 @@ First run failed:
 Run docker pull $REGISTRY/$IMAGE_NAME:$GITHUB_SHA
 Error: An error occurred trying to start process '/usr/bin/bash' with working directory '/home/runner/work/tl-test/tl-test/OrderService'. No such file or directory
 
-Cause: workflow-wide working-directory: OrderService default applies to every run: step in every job. deploy doesn't run actions/checkout (doesn't need source, just pulls the already-built image), so OrderService/ never exists on that job's runner - cd fails before docker pull even runs.
+Cause: workflow-wide working-directory: OrderService default applies to every run: step in every job. deploy doesn't run actions/checkout, so OrderService/ never exists on that job's runner.
 
-Fix: added defaults: run: working-directory: . inside the deploy job specifically, overriding the workflow-level default back to root for just that job.
+Fix: added "working-directory" inside the deploy job specifically, overriding the workflow-level default back to root for just that job.
 
 ===========
 
@@ -103,7 +106,7 @@ Second run, pull/stop/rm/run all succeeded but curl step failed:
 curl: (56) Recv failure: Connection reset by peer
 Error: Process completed with exit code 56.
 
-Cause: docker run -d returns immediately, doesn't wait for the app inside to finish starting. curl hit the port before the app had bound to it - race condition, not a bug in the image or deploy logic.
+Cause: docker run -d returns immediately, doesn't wait for the app inside to finish starting. curl hit the port before the app had bound to it.
 
 Fix: replaced the single curl with a retry loop polling /health every 2s up to 10 times before checking /version:
 for i in {1..10}; do
@@ -119,7 +122,7 @@ Pushed again, all four jobs green.
 
 ===========
 
-Also manually tested the pushed image on a separate VM on my network (outside GitHub Actions entirely) - pulled from GHCR, ran it, curled /health and /version, both correct. Confirms the image works standalone, not just inside the pipeline's own environment.
+Manually tested the pushed image on a separate VM on my network. Pulled from GHCR, ran it, curled /health and /version, both correct. Confirms the image works standalone, not just inside the pipeline's own environment.
 
 ===========
 
