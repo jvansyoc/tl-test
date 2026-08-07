@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      redeploy_only:
+        description: 'Skip build, redeploy last image'
+        type: boolean
+        default: false
+
+env:
+  IMAGE_NAME: orderservice
+  REGISTRY: ghcr.io/jvansyoc
+
+defaults:
+  run:
+    working-directory: OrderService
+
+jobs:
+  format-and-test:
+    if: ${{ !inputs.redeploy_only }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ hashFiles('**/*.csproj') }}
+      - run: dotnet format --verify-no-changes
+      - run: dotnet build -c Release
+      - run: dotnet list package --vulnerable --include-transitive

@@ -1,0 +1,14 @@
+@"
+root = true
+
+[*]
+indent_style = space
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.cs]
+indent_size = 4
+csharp_new_line_before_open_brace = none
+csharp_prefer_braces = true:suggestion
+"@ | Out-File -FilePath .editorconfig -Encoding utf8

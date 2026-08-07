@@ -1,0 +1,3 @@
+#Removing bloat files that are not needed
+bin/
+obj/
