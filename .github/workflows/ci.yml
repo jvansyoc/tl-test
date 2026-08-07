@@ -75,6 +75,9 @@ jobs:
     needs: push
     if: always() && (github.ref == 'refs/heads/main' || inputs.redeploy_only)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
     steps:
       - run: docker pull $REGISTRY/$IMAGE_NAME:$GITHUB_SHA
       - run: docker stop orderservice-prod 2>/dev/null || true; docker rm orderservice-prod 2>/dev/null || true
